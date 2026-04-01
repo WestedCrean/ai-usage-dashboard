@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+@theme {
+  /* Neumorphic palette */
+  --color-neo-bg:      #f0f4f8;
+  --color-neo-surface: #e8edf5;
+  --color-neo-dark:    #1a2942;
+  --color-neo-mid:     #4a5f7f;
+  --color-neo-muted:   #7a8fb5;
+
+  /* Accent palette */
+  --color-accent-indigo:  #6366f1;
+  --color-accent-purple:  #8b5cf6;
+  --color-accent-emerald: #10b981;
+  --color-accent-amber:   #f59e0b;
+  --color-accent-rose:    #ef4444;
+
+  /* Custom shadow tokens */
+  --shadow-neo:       -5px -5px 12px #ffffff, 5px 5px 12px #a8b9d1;
+  --shadow-neo-sm:    -3px -3px 7px #ffffff, 3px 3px 7px #a8b9d1;
+  --shadow-neo-inset: inset -3px -3px 7px #ffffff, inset 3px 3px 7px #a8b9d1;
+  --shadow-neo-press: inset -2px -2px 5px #ffffff, inset 2px 2px 5px #a8b9d1;
+  --shadow-glass:     0 8px 32px rgba(0,0,0,0.12), inset 1px 1px 0 rgba(255,255,255,0.28);
+  --shadow-glass-lg:  0 20px 40px rgba(0,0,0,0.18), inset 1px 1px 0 rgba(255,255,255,0.3);
+}
+
+/* ── Base reset ────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-neo-bg);
+  color: var(--color-neo-dark);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Neumorphic component layer ────────────────────────────────────────────── */
+@layer components {
+  /* Cards */
+  .card-neo {
+    background-color: var(--color-neo-surface);
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-neo);
+  }
+
+  .card-neo-sm {
+    background-color: var(--color-neo-surface);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-neo-sm);
+  }
+
+  /* Buttons */
+  .btn-neo {
+    background-color: var(--color-neo-surface);
+    color: var(--color-neo-dark);
+    border: none;
+    border-radius: 9999px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-neo-sm);
+    transition: box-shadow 150ms ease, transform 100ms ease;
+  }
+
+  .btn-neo:hover {
+    box-shadow: -4px -4px 10px #ffffff, 4px 4px 10px #a8b9d1;
+  }
+
+  .btn-neo:active {
+    box-shadow: var(--shadow-neo-press);
+    transform: translateY(1px);
+  }
+
+  /* Inset inputs */
+  .input-neo {
+    background-color: var(--color-neo-surface);
+    color: var(--color-neo-dark);
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-neo-inset);
+    transition: box-shadow 150ms ease;
+  }
+
+  .input-neo::placeholder {
+    color: var(--color-neo-muted);
+  }
+
+  .input-neo:focus {
+    outline: none;
+    box-shadow: var(--shadow-neo-inset), 0 0 0 2px rgba(99,102,241,0.25);
+  }
+}
+
+/* ── Glassmorphic component layer ──────────────────────────────────────────── */
+@layer components {
+  .card-glass {
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-glass);
+  }
+
+  @supports not (backdrop-filter: blur(1px)) {
+    .card-glass {
+      background: rgba(240,244,248,0.93);
+    }
+  }
+
+  .btn-glass {
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.28);
+    color: #ffffff;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+  }
+
+  .btn-glass:hover {
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.38);
+  }
+
+  .input-glass {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #ffffff;
+    border-radius: 0.625rem;
+  }
+
+  .input-glass::placeholder {
+    color: rgba(255,255,255,0.55);
+  }
+
+  .input-glass:focus {
+    outline: none;
+    border-color: rgba(255,255,255,0.4);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.12);
+  }
+}
+
+/* ── Recharts overrides ─────────────────────────────────────────────────────── */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: rgba(255,255,255,0.14) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: var(--shadow-glass) !important;
+}

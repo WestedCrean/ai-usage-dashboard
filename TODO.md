@@ -2,11 +2,12 @@
 
 ## Status Legend
 - [ ] Not started
+- [~] In progress
 - [x] Done
 
 ---
 
-## Phase 1: API Foundation (Current Focus)
+## Phase 1: API Foundation ✅
 
 ### 1.1 Python Project Setup (uv)
 - [x] Initialise `api/` directory with `uv init`
@@ -53,14 +54,74 @@
 
 ---
 
-## Phase 2: Frontend Dashboard (Future)
-- [ ] React + Vite scaffold in `frontend/`
-- [ ] Chart.js / Recharts integration
-- [ ] Filter controls (model, project, team, date range)
-- [ ] Export to CSV
+## Phase 2: Frontend Dashboard 🚧
 
-## Phase 3: Alerts & Notifications (Future)
-- [ ] Threshold configuration API
+### 2.1 Project Scaffold
+- [x] Vite + React 18 scaffold in `frontend/`
+- [x] TypeScript config (`tsconfig.json`, `tsconfig.node.json`)
+- [x] Tailwind CSS v3 with PostCSS
+- [x] ESLint config
+
+### 2.2 Design System & Tailwind Config
+- [x] Custom color palette (neo bg `#f0f4f8`, text, accents)
+- [x] Neumorphic box-shadow tokens (`shadow-neo`, `shadow-neo-sm`, `shadow-neo-inset`, `shadow-neo-press`)
+- [x] Glassmorphic utility classes (`card-glass`, `btn-glass`, `input-glass`)
+- [x] Global CSS reset + font setup
+- [x] `@layer components` for reusable class combos
+
+### 2.3 UI Primitives (`src/components/ui/`)
+- [x] `Button` – variants: `neo` (raised/pressed), `glass`, `ghost`; sizes: `sm`, `md`, `lg`
+- [x] `Card` – variants: `neo`, `glass`; with optional title slot
+- [x] `Input` – neumorphic inset style; label, error state
+- [x] `Select` – same styling as Input; options from array prop
+- [x] `Badge` – colour variants for model names / status labels
+- [ ] `Skeleton` – loading placeholder shimmer for cards/charts
+
+### 2.4 Layout (`src/components/layout/`)
+- [x] `Header` – glassmorphic sticky top bar; app title + filter toggle button
+- [x] `Sidebar` – glassmorphic side nav; links: Dashboard, Models, Projects
+- [x] `Layout` – wraps page content with sidebar + header; responsive collapse
+
+### 2.5 Dashboard Components (`src/components/dashboard/`)
+- [x] `StatCard` – neumorphic; shows label, value, delta (+ trend arrow + colour)
+- [x] `ChartCard` – neumorphic container wrapping a Recharts chart; title + optional subtitle
+- [x] `FilterPanel` – glassmorphic slide-in side panel; model / project / team / date-range controls
+- [ ] `ModelTable` – sortable table of models with per-model stats
+- [ ] `ExportButton` – triggers CSV download of current filtered data
+
+### 2.6 Charts (`src/components/charts/`)
+- [x] `UsageLineChart` – calls over time (line); x=date, y=count; one series per model
+- [x] `CostBarChart` – cost by model (bar); grouped by project optionally
+- [x] `TokenPieChart` – input vs output token split (pie / donut)
+- [ ] `LatencyChart` – avg latency trend over time (area chart)
+
+### 2.7 API Integration (`src/lib/` + `src/hooks/`)
+- [x] `src/lib/api.ts` – fetch wrapper; base URL from `VITE_API_URL` env var
+- [x] `src/hooks/useUsageSummary.ts` – TanStack Query hook for `/api/v1/usage/summary`
+- [x] `src/hooks/useUsage.ts` – hook for `/api/v1/usage` with filter params
+- [x] `src/hooks/useModels.ts` – hook for `/api/v1/models`
+- [x] `src/hooks/useProjects.ts` – hook for `/api/v1/projects`
+- [ ] `src/hooks/useExport.ts` – fetches data + triggers CSV download via `papaparse`
+
+### 2.8 Pages (`src/pages/`)
+- [x] `DashboardPage` – stat cards row + charts grid + filter panel integration
+- [ ] `ModelsPage` – list/register models; model detail with usage breakdown
+- [ ] `ProjectsPage` – list/create projects; project detail with usage breakdown
+
+### 2.9 Infrastructure
+- [x] `frontend/Dockerfile` – multi-stage: Vite build → Nginx serve
+- [x] `frontend/nginx.conf` – SPA routing (try_files fallback) + API proxy
+- [x] `compose.yaml` updated: add `frontend` service on port 3000
+- [ ] `frontend/.env.example` – document `VITE_API_URL`
+
+### 2.10 CI Updates
+- [ ] Add `frontend` job to `.github/workflows/ci.yml`: `npm ci`, `npm run lint`, `npm run build`
+
+---
+
+## Phase 3: Alerts & Notifications
+
+- [ ] Threshold configuration API (`POST/GET /api/v1/alerts`)
 - [ ] Background worker (ARQ or Celery) for threshold checks
 - [ ] Anomaly detection (Z-score baseline)
 - [ ] Notification channels (email / webhook)
