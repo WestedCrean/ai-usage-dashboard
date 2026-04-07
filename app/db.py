@@ -20,6 +20,7 @@ from app.models import (
     MetricKind,
     MetricPoint,
     RefreshRun,
+    TestStatus,
     TimeseriesPoint,
 )
 
@@ -85,6 +86,7 @@ async def _init_schema(db: aiosqlite.Connection) -> None:
             latency_ms   REAL,
             notes        TEXT,
             is_experimental INTEGER NOT NULL DEFAULT 0,
+            test_status  TEXT NOT NULL DEFAULT 'fail',
             tested_at    TEXT NOT NULL
         );
 
@@ -279,8 +281,8 @@ async def insert_endpoint_test(result: EndpointTestResult) -> None:
     db = await get_db()
     await db.execute(
         """INSERT INTO endpoint_tests
-           (provider, endpoint, method, status_code, ok, latency_ms, notes, is_experimental, tested_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           (provider, endpoint, method, status_code, ok, latency_ms, notes, is_experimental, test_status, tested_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             result.provider,
             result.endpoint,
@@ -290,6 +292,7 @@ async def insert_endpoint_test(result: EndpointTestResult) -> None:
             result.latency_ms,
             result.notes,
             int(result.is_experimental),
+            result.test_status.value,
             result.tested_at.isoformat(),
         ),
     )
@@ -313,8 +316,14 @@ async def get_latest_endpoint_tests() -> list[EndpointTestResult]:
             ORDER BY t.provider, t.endpoint
         """)
     ).fetchall()
-    return [
-        EndpointTestResult(
+    results = []
+    for r in rows:
+        # Handle legacy rows that may lack test_status column
+        try:
+            ts = TestStatus(r["test_status"])
+        except (KeyError, ValueError):
+            ts = TestStatus.PASS if bool(r["ok"]) else TestStatus.FAIL
+        results.append(EndpointTestResult(
             provider=r["provider"],
             endpoint=r["endpoint"],
             method=r["method"],
@@ -323,7 +332,7 @@ async def get_latest_endpoint_tests() -> list[EndpointTestResult]:
             latency_ms=r["latency_ms"],
             notes=r["notes"],
             is_experimental=bool(r["is_experimental"]),
+            test_status=ts,
             tested_at=datetime.fromisoformat(r["tested_at"]),
-        )
-        for r in rows
-    ]
+        ))
+    return results

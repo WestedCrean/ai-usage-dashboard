@@ -97,6 +97,13 @@ class RefreshRun(BaseModel):
 # ── Endpoint test result ──────────────────────────────────────────────────────
 
 
+class TestStatus(str, Enum):
+    """Honest test result classification."""
+    PASS = "pass"
+    FAIL = "fail"
+    SKIPPED = "skipped"      # Provider not configured — not a pass or failure
+
+
 class EndpointTestResult(BaseModel):
     provider: str
     endpoint: str
@@ -106,6 +113,7 @@ class EndpointTestResult(BaseModel):
     latency_ms: float | None = None
     notes: str | None = None
     is_experimental: bool = False
+    test_status: TestStatus = TestStatus.FAIL
     tested_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -147,6 +155,34 @@ class UsageWindow(BaseModel):
     unit: str
     percent_used: float | None
     source: DataSource
+
+
+class SubscriptionToolUsage(BaseModel):
+    """Usage vs limit for a single subscription-based coding tool."""
+    tool_id: str                               # e.g. "claude_code"
+    display_name: str                          # e.g. "Claude Code"
+    plan_name: str | None = None               # e.g. "Pro", if known
+    window_label: str                          # e.g. "Monthly — May 2025"
+    used: float | None = None
+    limit: float | None = None
+    unit: str = "USD"                          # unit for used/limit
+    percent_used: float | None = None
+    reset_at: datetime | None = None
+    source: DataSource = DataSource.UNAVAILABLE
+    api_equivalent_cost: float | None = None   # what this usage would cost via direct API
+    subscription_price: float | None = None    # monthly subscription price
+    estimated_savings: float | None = None     # max(api_equivalent_cost - subscription_price, 0)
+    notes: str | None = None                   # caveats about data quality
+
+
+class SubscriptionSummaryResponse(BaseModel):
+    """Aggregated subscription usage and savings for all supported tools."""
+    tools: list[SubscriptionToolUsage]
+    total_subscription_cost: float | None = None   # sum of subscription prices
+    total_api_equivalent: float | None = None      # sum of API equivalent costs
+    total_estimated_savings: float | None = None   # sum of per-tool savings
+    generated_at: datetime
+    caveats: list[str] = Field(default_factory=list)
 
 
 class RefreshStatus(BaseModel):

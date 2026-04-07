@@ -32,11 +32,13 @@ from app.models import (
     ProviderCard,
     RefreshRun,
     RefreshStatus,
+    SubscriptionSummaryResponse,
     TimeseriesPoint,
     UsageWindow,
 )
 from app.scheduler import get_next_run, start_scheduler, stop_scheduler
 from app.services import collector, metrics
+from app.services.subscriptions import get_subscription_summary
 
 logging.basicConfig(
     level=logging.INFO,
@@ -132,6 +134,19 @@ async def get_models():
 async def get_windows():
     """Usage window summaries with reset times."""
     return await metrics.get_windows()
+
+
+# ── API: Subscriptions ────────────────────────────────────────────────────
+
+
+@app.get(
+    "/api/subscriptions",
+    response_model=SubscriptionSummaryResponse,
+    tags=["subscriptions"],
+)
+async def get_subscriptions():
+    """Subscription usage vs limits and estimated savings for Claude Code, OpenAI Codex, and Mistral Vibe."""
+    return await get_subscription_summary()
 
 
 # ── API: Timeseries ───────────────────────────────────────────────────────────

@@ -508,8 +508,9 @@ html, body {
 
 .empty-row { text-align: center !important; color: var(--text-dim); padding: 32px 0 !important; }
 
-.status-ok  { color: var(--green); font-weight: 600; }
-.status-err { color: var(--red); font-weight: 600; }
+.status-ok   { color: var(--green); font-weight: 600; }
+.status-err  { color: var(--red); font-weight: 600; }
+.status-skip { color: var(--yellow); font-weight: 600; }
 
 /* ── Windows ───────────────────────────────────────────────────────────── */
 .windows-grid {
@@ -578,6 +579,147 @@ html, body {
   padding: 16px 0;
 }
 
+/* ── Subscription Section ─────────────────────────────────────────────── */
+.sub-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.sub-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.sub-tool-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color var(--transition);
+}
+.sub-tool-card:hover { border-color: var(--border-strong); }
+
+.sub-tool-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub-tool-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sub-tool-plan {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: rgba(79,142,255,0.1);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sub-tool-usage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sub-usage-bar-wrap {
+  height: 8px;
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sub-usage-bar {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+.sub-usage-bar.warning { background: var(--yellow); }
+.sub-usage-bar.danger  { background: var(--red); }
+
+.sub-usage-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.sub-savings-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.sub-savings-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.sub-savings-row .value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.sub-savings-row.positive .value { color: var(--green); }
+.sub-savings-row.negative .value { color: var(--red); }
+
+.sub-tool-notes {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.sub-tool-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.sub-caveats {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sub-caveats:empty { display: none; }
+
+.sub-caveat-item {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.4;
+  padding-left: 14px;
+  position: relative;
+}
+.sub-caveat-item::before {
+  content: '⚠';
+  position: absolute;
+  left: 0;
+  font-style: normal;
+}
+
 /* ── Buttons ───────────────────────────────────────────────────────────── */
 .btn-sm {
   padding: 5px 12px;
@@ -629,6 +771,8 @@ html, body {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .provider-grid { grid-template-columns: repeat(2, 1fr); }
   .windows-grid { grid-template-columns: repeat(2, 1fr); }
+  .sub-kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .sub-tools-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
@@ -637,4 +781,6 @@ html, body {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .chart-row { grid-template-columns: 1fr; }
   .provider-grid, .windows-grid { grid-template-columns: 1fr; }
+  .sub-kpi-row { grid-template-columns: 1fr; }
+  .sub-tools-grid { grid-template-columns: 1fr; }
 }

@@ -81,6 +81,8 @@ async def get_provider_cards() -> list[ProviderCard]:
 
     cards: list[ProviderCard] = []
     for provider in ALL_PROVIDERS:
+        if not provider.configured:
+            continue
         pmetrics = by_provider.get(provider.id, [])
         cards.append(ProviderCard(
             status=provider.status(),

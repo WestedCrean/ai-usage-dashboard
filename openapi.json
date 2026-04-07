@@ -1,0 +1,1018 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AI Usage Dashboard",
+    "description": "Tracks AI API usage across OpenAI, Anthropic, Gemini, Mistral, and OpenRouter",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/overview": {
+      "get": {
+        "tags": [
+          "metrics"
+        ],
+        "summary": "Get Overview",
+        "description": "Top-level KPI summary: total cost, tokens, requests, provider counts.",
+        "operationId": "get_overview_api_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/providers": {
+      "get": {
+        "tags": [
+          "metrics"
+        ],
+        "summary": "Get Providers",
+        "description": "Per-provider status and latest metrics.",
+        "operationId": "get_providers_api_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderCard"
+                  },
+                  "type": "array",
+                  "title": "Response Get Providers Api Providers Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models": {
+      "get": {
+        "tags": [
+          "metrics"
+        ],
+        "summary": "Get Models",
+        "description": "Per-model breakdown: tokens, cost, requests.",
+        "operationId": "get_models_api_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelBreakdown"
+                  },
+                  "type": "array",
+                  "title": "Response Get Models Api Models Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/windows": {
+      "get": {
+        "tags": [
+          "metrics"
+        ],
+        "summary": "Get Windows",
+        "description": "Usage window summaries with reset times.",
+        "operationId": "get_windows_api_windows_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UsageWindow"
+                  },
+                  "type": "array",
+                  "title": "Response Get Windows Api Windows Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/timeseries": {
+      "get": {
+        "tags": [
+          "metrics"
+        ],
+        "summary": "Get Timeseries",
+        "description": "Historical metric data for charting.",
+        "operationId": "get_timeseries_api_timeseries_get",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by provider slug",
+              "title": "Provider"
+            },
+            "description": "Filter by provider slug"
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by metric kind",
+              "title": "Kind"
+            },
+            "description": "Filter by metric kind"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2000,
+              "default": 500,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TimeseriesPoint"
+                  },
+                  "title": "Response Get Timeseries Api Timeseries Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tests": {
+      "get": {
+        "tags": [
+          "testing"
+        ],
+        "summary": "Get Tests",
+        "description": "Latest endpoint smoke test results.",
+        "operationId": "get_tests_api_tests_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EndpointTestResult"
+                  },
+                  "type": "array",
+                  "title": "Response Get Tests Api Tests Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tests/run": {
+      "post": {
+        "tags": [
+          "testing"
+        ],
+        "summary": "Run Tests",
+        "description": "Run endpoint smoke tests against all configured providers.",
+        "operationId": "run_tests_api_tests_run_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EndpointTestResult"
+                  },
+                  "type": "array",
+                  "title": "Response Run Tests Api Tests Run Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/refresh": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Manual Refresh",
+        "description": "Trigger an immediate refresh across all providers.",
+        "operationId": "manual_refresh_api_refresh_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshRun"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/refresh/status": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Refresh Status",
+        "operationId": "refresh_status_api_refresh_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DataSource": {
+        "type": "string",
+        "enum": [
+          "official",
+          "inferred",
+          "experimental",
+          "unavailable"
+        ],
+        "title": "DataSource",
+        "description": "Transparency: where does this data come from?"
+      },
+      "EndpointTestResult": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "endpoint": {
+            "type": "string",
+            "title": "Endpoint"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "default": "GET"
+          },
+          "status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Code"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": false
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "is_experimental": {
+            "type": "boolean",
+            "title": "Is Experimental",
+            "default": false
+          },
+          "tested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Tested At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "endpoint"
+        ],
+        "title": "EndpointTestResult"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MetricKind": {
+        "type": "string",
+        "enum": [
+          "cost_usd",
+          "tokens_input",
+          "tokens_output",
+          "requests",
+          "credits_used",
+          "credits_remaining",
+          "rate_limit_used",
+          "rate_limit_total"
+        ],
+        "title": "MetricKind"
+      },
+      "MetricPoint": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MetricKind"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataSource",
+            "default": "official"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "captured_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Captured At"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "kind",
+          "value",
+          "unit"
+        ],
+        "title": "MetricPoint",
+        "description": "A single normalized measurement from a provider."
+      },
+      "ModelBreakdown": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "tokens_input": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Input"
+          },
+          "tokens_output": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Output"
+          },
+          "requests": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requests"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "provider",
+          "cost_usd",
+          "tokens_input",
+          "tokens_output",
+          "requests"
+        ],
+        "title": "ModelBreakdown"
+      },
+      "OverviewResponse": {
+        "properties": {
+          "total_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Cost Usd"
+          },
+          "total_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens"
+          },
+          "total_requests": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Requests"
+          },
+          "active_providers": {
+            "type": "integer",
+            "title": "Active Providers"
+          },
+          "configured_providers": {
+            "type": "integer",
+            "title": "Configured Providers"
+          },
+          "last_refresh": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Refresh"
+          },
+          "next_refresh": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Refresh"
+          },
+          "data_sources": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DataSource"
+            },
+            "type": "object",
+            "title": "Data Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_cost_usd",
+          "total_tokens",
+          "total_requests",
+          "active_providers",
+          "configured_providers",
+          "last_refresh",
+          "next_refresh",
+          "data_sources"
+        ],
+        "title": "OverviewResponse"
+      },
+      "ProviderCard": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ProviderStatus"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricPoint"
+            },
+            "type": "array",
+            "title": "Metrics"
+          },
+          "window_reset": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Reset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "metrics"
+        ],
+        "title": "ProviderCard"
+      },
+      "ProviderKind": {
+        "type": "string",
+        "enum": [
+          "api",
+          "tool"
+        ],
+        "title": "ProviderKind",
+        "description": "Distinguishes official API providers from CLI/subscription tools."
+      },
+      "ProviderStatus": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ProviderKind"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "reachable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reachable"
+          },
+          "last_checked": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data_source": {
+            "$ref": "#/components/schemas/DataSource",
+            "default": "unavailable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "display_name",
+          "kind",
+          "configured"
+        ],
+        "title": "ProviderStatus",
+        "description": "Current health/status of a single provider adapter."
+      },
+      "RefreshRun": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "triggered_by": {
+            "type": "string",
+            "title": "Triggered By",
+            "default": "scheduler"
+          },
+          "providers_attempted": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Providers Attempted"
+          },
+          "providers_succeeded": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Providers Succeeded"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "started_at"
+        ],
+        "title": "RefreshRun"
+      },
+      "RefreshStatus": {
+        "properties": {
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefreshRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "interval_minutes": {
+            "type": "integer",
+            "title": "Interval Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "last_run",
+          "next_run_at",
+          "interval_minutes"
+        ],
+        "title": "RefreshStatus"
+      },
+      "TimeseriesPoint": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MetricKind"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp",
+          "provider",
+          "kind",
+          "value"
+        ],
+        "title": "TimeseriesPoint"
+      },
+      "UsageWindow": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "window_label": {
+            "type": "string",
+            "title": "Window Label"
+          },
+          "reset_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reset At"
+          },
+          "used": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "percent_used": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Used"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataSource"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "window_label",
+          "reset_at",
+          "used",
+          "limit",
+          "unit",
+          "percent_used",
+          "source"
+        ],
+        "title": "UsageWindow"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -49,6 +49,49 @@ class Settings(BaseSettings):
     # Gemini project ID for quota metrics (optional, ENABLE_EXPERIMENTAL)
     google_cloud_project: str | None = Field(default=None, alias="GOOGLE_CLOUD_PROJECT")
 
+    # Claude Code organization ID (for experimental /api/organizations/{org_id}/usage)
+    claude_code_org_id: str | None = Field(default=None, alias="CLAUDE_CODE_ORG_ID")
+
+    # Mistral Vibe session cookie (for experimental console.mistral.ai vibe-usage)
+    mistral_vibe_session: str | None = Field(default=None, alias="MISTRAL_VIBE_SESSION")
+
+    # ── Subscription pricing (configurable) ───────────────────────────────
+    # Monthly subscription prices in USD.  Set to 0 or leave default to
+    # indicate "unknown / not subscribed".
+    claude_code_subscription_price: float = Field(
+        default=20.0, alias="CLAUDE_CODE_SUBSCRIPTION_PRICE",
+        description="Monthly price (USD) for the Claude Code subscription plan.",
+    )
+    claude_code_plan_name: str = Field(
+        default="Pro", alias="CLAUDE_CODE_PLAN_NAME",
+    )
+    codex_subscription_price: float = Field(
+        default=200.0, alias="CODEX_SUBSCRIPTION_PRICE",
+        description="Monthly price (USD) for the OpenAI Codex / ChatGPT Pro plan.",
+    )
+    codex_plan_name: str = Field(
+        default="Pro", alias="CODEX_PLAN_NAME",
+    )
+    mistral_vibe_subscription_price: float = Field(
+        default=19.99, alias="MISTRAL_VIBE_SUBSCRIPTION_PRICE",
+        description="Monthly price (USD) for the Mistral le Chat / Vibe subscription.",
+    )
+    mistral_vibe_plan_name: str = Field(
+        default="Pro", alias="MISTRAL_VIBE_PLAN_NAME",
+    )
+
+    # Per-token API pricing assumptions for savings estimation (USD per 1K tokens).
+    # These are rough averages; override via env if your usage profile differs.
+    claude_api_cost_per_1k_tokens: float = Field(
+        default=0.015, alias="CLAUDE_API_COST_PER_1K_TOKENS",
+    )
+    openai_api_cost_per_1k_tokens: float = Field(
+        default=0.01, alias="OPENAI_API_COST_PER_1K_TOKENS",
+    )
+    mistral_api_cost_per_1k_tokens: float = Field(
+        default=0.002, alias="MISTRAL_API_COST_PER_1K_TOKENS",
+    )
+
 
 _settings: Settings | None = None
 

@@ -18,7 +18,7 @@ import httpx
 
 from app import db
 from app.config import get_settings
-from app.models import EndpointTestResult
+from app.models import EndpointTestResult, TestStatus
 
 logger = logging.getLogger(__name__)
 
@@ -77,14 +77,36 @@ def _get_experimental_endpoints(settings) -> list[tuple]:
     entries = []
 
     # ── Claude Code ───────────────────────────────────────────────────────
-    # Community-discovered analytics endpoint — may break without notice.
+    # Community-discovered usage endpoint — may break without notice.
     if settings.claude_code_session:
+        org_id = settings.claude_code_org_id
+        if org_id:
+            entries.append((
+                "claude_code",
+                f"https://claude.ai/api/organizations/{org_id}/usage",
+                "GET",
+                True,
+                "Claude Code usage (experimental — requires session cookie + org ID)",
+            ))
+        else:
+            # Fall back to org discovery endpoint
+            entries.append((
+                "claude_code",
+                "https://claude.ai/api/organizations",
+                "GET",
+                True,
+                "Claude Code org discovery (experimental — requires session cookie)",
+            ))
+
+    # ── Mistral Vibe ──────────────────────────────────────────────────────
+    # Hidden console endpoint for subscription usage
+    if settings.mistral_vibe_session:
         entries.append((
-            "claude_code",
-            "https://api.claude.ai/api/organizations/usage",
+            "mistral_vibe",
+            "https://console.mistral.ai/api/billing/v2/vibe-usage",
             "GET",
             True,
-            "Claude Code usage analytics (community endpoint — requires session cookie)",
+            "Mistral Vibe usage (experimental — requires console session cookie)",
         ))
 
     # ── OpenAI org usage ──────────────────────────────────────────────────
@@ -99,6 +121,37 @@ def _get_experimental_endpoints(settings) -> list[tuple]:
         ))
 
     return entries
+
+
+def _get_skipped_providers(settings) -> list[EndpointTestResult]:
+    """Return explicit SKIPPED results for providers without credentials."""
+    skipped: list[EndpointTestResult] = []
+    now = datetime.utcnow()
+
+    provider_key_map = [
+        ("openai", settings.openai_api_key, "https://api.openai.com/v1/models"),
+        ("anthropic", settings.anthropic_api_key, "https://api.anthropic.com/v1/models"),
+        ("gemini", settings.gemini_api_key, "https://generativelanguage.googleapis.com/v1beta/models"),
+        ("mistral", settings.mistral_api_key, "https://api.mistral.ai/v1/models"),
+        ("openrouter", settings.openrouter_api_key, "https://openrouter.ai/api/v1/auth/key"),
+    ]
+
+    for provider, key, endpoint in provider_key_map:
+        if not key:
+            skipped.append(EndpointTestResult(
+                provider=provider,
+                endpoint=endpoint,
+                method="GET",
+                status_code=None,
+                ok=False,
+                latency_ms=None,
+                notes="API key not configured — skipped",
+                is_experimental=False,
+                test_status=TestStatus.SKIPPED,
+                tested_at=now,
+            ))
+
+    return skipped
 
 
 async def _test_one(
@@ -120,12 +173,16 @@ async def _test_one(
         headers["x-api-key"] = settings.anthropic_api_key
         headers["anthropic-version"] = "2023-06-01"
         headers["anthropic-beta"] = "usage-2025-01-01"
-    elif "mistral.ai" in url and settings.mistral_api_key:
+    elif "api.mistral.ai" in url and settings.mistral_api_key:
         headers["Authorization"] = f"Bearer {settings.mistral_api_key}"
     elif "openrouter.ai" in url and settings.openrouter_api_key:
         headers["Authorization"] = f"Bearer {settings.openrouter_api_key}"
     elif "claude.ai" in url and settings.claude_code_session:
         headers["Cookie"] = f"sessionKey={settings.claude_code_session}"
+        headers["User-Agent"] = "ai-usage-dashboard/0.1"
+    elif "console.mistral.ai" in url and settings.mistral_vibe_session:
+        headers["Cookie"] = settings.mistral_vibe_session
+        headers["User-Agent"] = "ai-usage-dashboard/0.1"
 
     t0 = time.monotonic()
     try:
@@ -137,18 +194,31 @@ async def _test_one(
         )
         latency = (time.monotonic() - t0) * 1000
         ok = resp.status_code < 400
+
+        # Attempt to parse JSON for additional honesty
         result_notes = notes
-        if not ok:
-            result_notes += f" | Response: {resp.text[:100]}"
+        parseable = False
+        if ok:
+            try:
+                resp.json()
+                parseable = True
+            except Exception:
+                result_notes += " | Response not valid JSON"
+        else:
+            result_notes += f" | HTTP {resp.status_code}: {resp.text[:100]}"
+
+        test_status = TestStatus.PASS if (ok and parseable) else TestStatus.FAIL
+
         return EndpointTestResult(
             provider=provider,
             endpoint=url,
             method=method,
             status_code=resp.status_code,
-            ok=ok,
+            ok=ok and parseable,
             latency_ms=round(latency, 1),
             notes=result_notes,
             is_experimental=is_experimental,
+            test_status=test_status,
         )
     except httpx.TimeoutException:
         latency = (time.monotonic() - t0) * 1000
@@ -161,6 +231,7 @@ async def _test_one(
             latency_ms=round(latency, 1),
             notes=notes + " | Timeout",
             is_experimental=is_experimental,
+            test_status=TestStatus.FAIL,
         )
     except Exception as exc:
         latency = (time.monotonic() - t0) * 1000
@@ -173,6 +244,7 @@ async def _test_one(
             latency_ms=round(latency, 1),
             notes=notes + f" | Error: {exc}",
             is_experimental=is_experimental,
+            test_status=TestStatus.FAIL,
         )
 
 
@@ -181,39 +253,42 @@ async def run_smoke_tests() -> list[EndpointTestResult]:
     settings = get_settings()
 
     endpoints = _get_official_endpoints(settings) + _get_experimental_endpoints(settings)
+    skipped = _get_skipped_providers(settings)
 
-    if not endpoints:
-        logger.info("No endpoints to test (no API keys configured)")
-        return []
+    results: list[EndpointTestResult] = list(skipped)
 
-    results: list[EndpointTestResult] = []
-
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        tasks = [
-            _test_one(client, settings, *entry)
-            for entry in endpoints
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=False)
+    if endpoints:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            tasks = [
+                _test_one(client, settings, *entry)
+                for entry in endpoints
+            ]
+            tested = await asyncio.gather(*tasks, return_exceptions=False)
+            results.extend(tested)
 
     # Persist results
     for r in results:
         await db.insert_endpoint_test(r)
-        status_str = "OK" if r.ok else "FAIL"
+        status_label = r.test_status.value.upper()
         logger.info(
-            "[%s] %s %s → %s (%s%s)",
-            status_str, r.provider, r.endpoint,
+            "[%s] %s %s -> %s (%s%s)",
+            status_label, r.provider, r.endpoint,
             r.status_code or "n/a",
             f"{r.latency_ms:.0f}ms" if r.latency_ms else "—",
             " [experimental]" if r.is_experimental else "",
         )
 
-    ok_count = sum(1 for r in results if r.ok)
-    logger.info("Smoke tests complete: %d/%d passed", ok_count, len(results))
+    ok_count = sum(1 for r in results if r.test_status == TestStatus.PASS)
+    skip_count = sum(1 for r in results if r.test_status == TestStatus.SKIPPED)
+    fail_count = sum(1 for r in results if r.test_status == TestStatus.FAIL)
+    logger.info(
+        "Smoke tests complete: %d passed, %d failed, %d skipped",
+        ok_count, fail_count, skip_count,
+    )
     return results
 
 
 # ── CLI runner ────────────────────────────────────────────────────────────────
-
 async def _main():
     from rich.console import Console
     from rich.table import Table
@@ -237,7 +312,12 @@ async def _main():
     table.add_column("Type", justify="center")
 
     for r in results:
-        status = "[green]OK[/green]" if r.ok else "[red]FAIL[/red]"
+        if r.test_status == TestStatus.PASS:
+            status = "[green]PASS[/green]"
+        elif r.test_status == TestStatus.SKIPPED:
+            status = "[yellow]SKIP[/yellow]"
+        else:
+            status = "[red]FAIL[/red]"
         latency = f"{r.latency_ms:.0f}ms" if r.latency_ms else "—"
         kind = "[yellow]experimental[/yellow]" if r.is_experimental else "official"
         table.add_row(r.provider, r.endpoint[:60], status, latency, r.notes or "", kind)

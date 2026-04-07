@@ -4,154 +4,151 @@ A local Python dashboard for tracking AI API usage across OpenAI, Anthropic, Goo
 
 ## Features
 
-- **Normalized metrics architecture** — all providers share a common data model
-- **Dark-first, polished UI** — technical dashboard with charts, KPI cards, and data tables
-- **Auto-refresh every 15 minutes** via APScheduler + manual Refresh button
-- **SQLite persistence** — snapshots and metric history survive restarts
-- **Graceful empty states** — missing API keys show clear "not configured" UI rather than errors
-- **Data source transparency** — every metric labeled Official / Inferred / Experimental / N/A
-- **Endpoint smoke tests** — one-click test of all configured provider endpoints
-- **OpenAPI docs** at `/docs`
-
-## Requirements
-
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) (`pip install uv`)
+- Normalized metrics architecture across providers
+- Dark-first dashboard UI with KPIs, charts, tables, and empty states
+- Auto-refresh every 15 minutes plus manual refresh
+- SQLite persistence for refresh runs, snapshots, metrics, and endpoint tests
+- Provider filtering so only configured providers appear in provider and window views
+- Honest endpoint smoke tests with PASS / FAIL / SKIPPED states and real HTTP status verification
+- Subscription usage and savings view for Claude Code, OpenAI Codex, and Mistral Vibe
+- Experimental support for hidden session-based endpoints for Claude Code and Mistral Vibe
+- OpenAPI docs at `/docs`
 
 ## Quick Start
 
 ```bash
-# 1. Clone or unzip the project
 cd ai-usage-dashboard
-
-# 2. Install dependencies
 uv sync
-
-# 3. Configure credentials (copy the example and fill in your keys)
 cp .env.example .env
-# Edit .env with your API keys
-
-# 4. Run the dashboard
 uv run uvicorn app.main:app --reload
-# OR
-uv run python -m app.main
 ```
 
-Open http://localhost:8000 in your browser.
+Open [http://localhost:8000](http://localhost:8000)
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and set the variables you have:
+Copy `.env.example` to `.env` and set the variables you have.
 
-| Variable | Required | Description |
-|---|---|---|
-| `OPENAI_API_KEY` | Optional | OpenAI API key (sk-...) |
-| `OPENAI_ORG_ID` | Optional | OpenAI organization ID — enables org-level usage data |
-| `OPENAI_PROJECT_ID` | Optional | OpenAI project ID |
-| `ANTHROPIC_API_KEY` | Optional | Anthropic API key (sk-ant-...) |
-| `GEMINI_API_KEY` | Optional | Google AI Studio API key |
-| `MISTRAL_API_KEY` | Optional | Mistral AI API key |
-| `OPENROUTER_API_KEY` | Optional | OpenRouter API key (sk-or-...) |
-| `HOST` | Optional | Bind address (default: `127.0.0.1`) |
-| `PORT` | Optional | Port (default: `8000`) |
-| `DEBUG` | Optional | Enable Uvicorn reload (default: `false`) |
-| `DB_PATH` | Optional | SQLite database path (default: `data/dashboard.db`) |
-| `REFRESH_INTERVAL_MINUTES` | Optional | Auto-refresh interval (default: `15`) |
-| `ENABLE_EXPERIMENTAL` | Optional | Enable experimental/community endpoints (default: `false`) |
-| `CLAUDE_CODE_SESSION` | Optional | Claude Code session cookie (requires `ENABLE_EXPERIMENTAL=true`) |
-| `GOOGLE_CLOUD_PROJECT` | Optional | GCP project ID for Cloud Monitoring quota (requires `ENABLE_EXPERIMENTAL=true`) |
+### API providers
 
-## Providers
+- `OPENAI_API_KEY`
+- `OPENAI_ORG_ID`
+- `OPENAI_PROJECT_ID`
+- `ANTHROPIC_API_KEY`
+- `GEMINI_API_KEY`
+- `MISTRAL_API_KEY`
+- `OPENROUTER_API_KEY`
 
-### API Providers (official REST APIs)
+### App config
 
-| Provider | Usage Data | Cost Data | Notes |
-|---|---|---|---|
-| OpenAI | ⚠️ Access-dependent (`/v1/usage`, experimental org usage path also documented) | ⚠️ Dashboard billing path tested as best-effort | Org-level key recommended; response shape may vary |
-| Anthropic | ⚠️ Beta/admin usage reporting endpoints researched | ⚠️ Inferred from public pricing in this build | Adapter currently uses beta `/v1/usage` assumptions |
-| Google Gemini | ❌ Not available via AI Studio API | ❌ Not available | Model list only; Cloud Monitoring quota path is documented but not implemented |
-| Mistral AI | ⚠️ Usage endpoint assumptions implemented | ⚠️ EUR balance and spend tracked separately from USD totals | Workspace-level key |
-| OpenRouter | ✅ Official (`/api/v1/auth/key`) | ✅ Official | Credit-based billing; recent generations queried for token breakdown |
+- `HOST`
+- `PORT`
+- `DEBUG`
+- `DB_PATH`
+- `REFRESH_INTERVAL_MINUTES`
+- `ENABLE_EXPERIMENTAL`
 
-### Coding Tools (subscription / CLI tools)
+### Experimental hidden endpoint auth
 
-These tools do not expose machine-readable usage APIs. They appear in the dashboard with appropriate empty states.
+- `CLAUDE_CODE_SESSION`
+- `CLAUDE_CODE_ORG_ID`
+- `MISTRAL_VIBE_SESSION`
+- `GOOGLE_CLOUD_PROJECT`
 
-| Tool | Notes |
-|---|---|
-| OpenAI Codex | Billed through OpenAI account; visible under OpenAI billing |
-| Claude Code | Subscription; session-level experimental endpoint available |
-| Gemini CLI | Google account free tier or Gemini Advanced subscription |
-| Mistral Vibe | Subscription coding assistant |
+### Subscription pricing inputs
 
-## Running Endpoint Smoke Tests
+- `CLAUDE_CODE_SUBSCRIPTION_PRICE`
+- `CLAUDE_CODE_PLAN_NAME`
+- `CODEX_SUBSCRIPTION_PRICE`
+- `CODEX_PLAN_NAME`
+- `MISTRAL_VIBE_SUBSCRIPTION_PRICE`
+- `MISTRAL_VIBE_PLAN_NAME`
+- `CLAUDE_API_COST_PER_1K_TOKENS`
+- `OPENAI_API_COST_PER_1K_TOKENS`
+- `MISTRAL_API_COST_PER_1K_TOKENS`
 
-Via the dashboard UI: navigate to **Endpoint Tests** → click **Run Tests**.
+## Dashboard sections
 
-Via CLI:
+- Overview
+- Providers
+- Models
+- Usage History
+- Subscriptions
+- Windows
+- Endpoint Tests
 
-```bash
-uv run python -m app.services.smoke_tests
-```
+## Provider behavior
 
-## Project Structure
+### API providers
 
-```
+- OpenAI
+- Anthropic
+- Google Gemini
+- Mistral AI
+- OpenRouter
+
+These appear in provider and usage-window views only when the relevant credentials are configured.
+
+### Tool and subscription views
+
+- OpenAI Codex
+- Claude Code
+- Gemini CLI
+- Mistral Vibe
+
+The subscriptions section tracks Claude Code, Codex, and Mistral Vibe subscription pricing and estimated API-equivalent savings. Actual usage is shown when enough data is available. Otherwise, the UI shows clear caveats and placeholders.
+
+## Hidden endpoints
+
+Two hidden session-based endpoints are wired behind `ENABLE_EXPERIMENTAL=true`:
+
+- Claude Code: `https://claude.ai/api/organizations/{org_id}/usage`
+- Mistral Vibe: `https://console.mistral.ai/api/billing/v2/vibe-usage`
+
+These require browser session cookies, not just API keys, and may break without notice.
+
+## Smoke tests
+
+Run from the UI or via the API.
+
+- `GET /api/tests`
+- `POST /api/tests/run`
+
+Status meanings:
+- `pass`: HTTP response under 400 and valid JSON
+- `fail`: HTTP error, timeout, non-JSON, or network failure
+- `skipped`: provider not configured
+
+## Project structure
+
+```text
 ai-usage-dashboard/
 ├── app/
-│   ├── main.py              # FastAPI app, routes, lifespan
-│   ├── config.py            # Pydantic settings (env vars)
-│   ├── models.py            # Pydantic data models
-│   ├── db.py                # SQLite persistence (aiosqlite)
-│   ├── scheduler.py         # APScheduler background refresh
+│   ├── main.py
+│   ├── config.py
+│   ├── models.py
+│   ├── db.py
+│   ├── scheduler.py
 │   ├── providers/
-│   │   ├── base.py          # BaseProvider abstract class
-│   │   ├── openai.py        # OpenAI adapter
-│   │   ├── anthropic.py     # Anthropic adapter
-│   │   ├── gemini.py        # Google Gemini adapter
-│   │   ├── mistral.py       # Mistral AI adapter
-│   │   ├── openrouter.py    # OpenRouter adapter
-│   │   └── tool_usage.py    # Codex, Claude Code, Gemini CLI, Mistral Vibe
 │   ├── services/
-│   │   ├── collector.py     # Orchestrates all providers
-│   │   ├── metrics.py       # KPI aggregation
-│   │   └── smoke_tests.py   # Endpoint smoke tests
 │   ├── templates/
-│   │   └── dashboard.html   # Jinja2 HTML template
 │   └── static/
-│       ├── css/dashboard.css
-│       └── js/dashboard.js
-├── tests/                   # lightweight pytest checks for metrics/window logic
-├── data/                    # SQLite DB (auto-created)
+├── tests/
+├── data/
 ├── .env.example
-├── pyproject.toml
 ├── README.md
-└── ENDPOINTS.md
+├── ENDPOINTS.md
+├── FRONTEND_HANDOFF.md
+├── openapi.json
+└── openapi.yaml
 ```
 
-## API Reference
+## Notes
 
-See [ENDPOINTS.md](ENDPOINTS.md) for the full list of API endpoints (both dashboard and provider endpoints).
+- OpenAI usage and billing access varies by account and key scope.
+- Anthropic official admin usage endpoints exist, but standard API-key coverage differs from admin-key coverage.
+- Gemini still has limited usage visibility via the standard AI Studio API.
+- Mistral spend may be EUR-denominated and should not be merged into USD totals without conversion.
+- Hidden session-based endpoints are experimental by nature.
 
-Interactive docs: http://localhost:8000/docs
-
-## Data Model
-
-The database stores:
-
-- **refresh_runs** — each refresh cycle with timestamps and success counts
-- **raw_snapshots** — full JSON responses from each provider per run
-- **metric_points** — normalized measurements (cost, tokens, requests) per provider/model
-- **endpoint_tests** — smoke test results with status codes and latency
-
-## Experimental Endpoints
-
-Set `ENABLE_EXPERIMENTAL=true` in `.env` to unlock community-discovered or access-gated endpoints.
-These are never required for baseline functionality and may break without warning.
-
-Important caveats in this version:
-- OpenAI usage and billing paths are implemented as best-effort because public coverage is fragmented and account access varies.
-- Anthropic usage support is based on researched beta/admin reporting references, but real response schemas may require adapter updates once tested with your credentials.
-- Gemini quota collection via Cloud Monitoring is documented but not yet implemented.
-
-See [ENDPOINTS.md](ENDPOINTS.md) for details.
+See `ENDPOINTS.md` for the full endpoint reference.

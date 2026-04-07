@@ -1,202 +1,137 @@
 # ENDPOINTS.md — AI Usage Dashboard
 
-Full reference for all endpoints: dashboard API endpoints and provider endpoints used internally.
+Reference for both dashboard API endpoints and provider endpoints used or researched by the app.
 
----
+## Dashboard API endpoints
 
-## Dashboard API Endpoints
-
-All endpoints are served locally at `http://localhost:8000` (configurable via `HOST` and `PORT`).
+Base URL: `http://localhost:8000`
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/` | Dashboard UI (HTML) |
-| `GET` | `/health` | Health check — returns `{"status": "ok", "timestamp": "..."}` |
-| `GET` | `/api/overview` | Top-level KPI summary (cost, tokens, requests, provider counts) |
-| `GET` | `/api/providers` | Per-provider status and latest metrics |
-| `GET` | `/api/models` | Per-model token/cost/request breakdown |
-| `GET` | `/api/windows` | Usage window summaries with reset times |
-| `GET` | `/api/timeseries` | Historical metric data for charts. Query params: `provider`, `kind`, `limit` |
-| `GET` | `/api/tests` | Latest endpoint smoke test results |
-| `POST` | `/api/tests/run` | Run endpoint smoke tests (returns results immediately) |
-| `POST` | `/api/refresh` | Trigger immediate refresh across all providers |
-| `GET` | `/api/refresh/status` | Last refresh run info + next scheduled run time |
-| `GET` | `/docs` | Interactive OpenAPI documentation (Swagger UI) |
-| `GET` | `/redoc` | ReDoc API documentation |
+| `GET` | `/` | Dashboard UI |
+| `GET` | `/health` | Health check |
+| `GET` | `/api/overview` | KPI summary |
+| `GET` | `/api/providers` | Provider cards for configured providers only |
+| `GET` | `/api/models` | Model breakdown |
+| `GET` | `/api/windows` | Usage windows for configured providers only |
+| `GET` | `/api/timeseries` | Historical metric points for charts |
+| `GET` | `/api/subscriptions` | Subscription usage, limits, and estimated savings |
+| `GET` | `/api/tests` | Latest smoke test results |
+| `POST` | `/api/tests/run` | Run smoke tests now |
+| `POST` | `/api/refresh` | Trigger refresh now |
+| `GET` | `/api/refresh/status` | Refresh freshness and next-run info |
+| `GET` | `/docs` | Swagger UI |
+| `GET` | `/redoc` | ReDoc |
 
----
+## Smoke test status rules
 
-## Provider Endpoints
+| Status | Meaning |
+|---|---|
+| `pass` | HTTP status under 400 and JSON parsed successfully |
+| `fail` | HTTP/network/parsing failure |
+| `skipped` | Provider not configured |
+
+## Official and best-effort provider endpoints
 
 ### OpenAI
 
-**Data source:** Best-effort official / access-dependent
-
-| Endpoint | Method | Description | Auth |
-|---|---|---|---|
-| `https://api.openai.com/v1/models` | GET | List available models | Bearer token |
-| `https://api.openai.com/v1/usage` | GET | Usage by date range (implemented as a best-effort adapter path) | Bearer token, optional Org header |
-| `https://api.openai.com/dashboard/billing/usage` | GET | Dashboard billing usage in cents (legacy/account-dependent path) | Bearer token |
-
-**Required headers:**
-```
-Authorization: Bearer sk-...
-OpenAI-Organization: org-... (optional, improves data quality)
-```
-
-**Notes:**
-- `/v1/usage` is implemented in the adapter, but public documentation and response shape coverage are inconsistent across accounts.
-- `/dashboard/billing/usage` is treated as a best-effort dashboard path; some accounts may not expose it.
-- Organization-level access may be required for fuller data; project keys may see limited or no usage detail.
-
----
+| Endpoint | Method | Purpose | Auth | Notes |
+|---|---|---|---|---|
+| `https://api.openai.com/v1/models` | GET | Model list | Bearer token | Used in smoke tests |
+| `https://api.openai.com/v1/usage` | GET | Usage by date range | Bearer token | Best-effort, access varies |
+| `https://api.openai.com/dashboard/billing/usage` | GET | Legacy dashboard billing usage | Browser/session or account-dependent | Best-effort, fragile |
+| `https://api.openai.com/v1/organization/usage/completions` | GET | Organization usage | Org-level access | Official but access-gated |
+| `https://api.openai.com/v1/organization/costs` | GET | Organization costs | Org-level access | Official usage dashboard companion |
 
 ### Anthropic
 
-**Data source:** Researched beta/admin reporting; Inferred cost in this build
+| Endpoint | Method | Purpose | Auth | Notes |
+|---|---|---|---|---|
+| `https://api.anthropic.com/v1/models` | GET | Model list | `x-api-key` | Used in smoke tests |
+| `https://api.anthropic.com/v1/usage` | GET | Beta usage path | `x-api-key` + beta header | Best-effort, response may vary |
+| `https://api.anthropic.com/v1/organizations/usage_report/messages` | GET | Official admin usage report | Admin API key | Official admin endpoint |
+| `https://api.anthropic.com/v1/organizations/cost_report` | GET | Official admin cost report | Admin API key | Official admin endpoint |
+| `https://api.anthropic.com/v1/organizations/me` | GET | Current organization | Admin API key | Useful for org discovery |
 
-| Endpoint | Method | Description | Auth |
-|---|---|---|---|
-| `https://api.anthropic.com/v1/models` | GET | List available models | x-api-key |
-| `https://api.anthropic.com/v1/usage` | GET | Token usage (beta path assumed by the current adapter) | x-api-key + beta header |
-| `https://api.anthropic.com/v1/organizations/usage_report/messages` | GET | Admin usage report reference researched for future adapter hardening | Admin auth requirements vary |
+### Gemini
 
-**Required headers:**
-```
-x-api-key: sk-ant-...
-anthropic-version: 2023-06-01
-anthropic-beta: usage-2025-01-01
-```
+| Endpoint | Method | Purpose | Auth | Notes |
+|---|---|---|---|---|
+| `https://generativelanguage.googleapis.com/v1beta/models` | GET | Model list | API key | Used in smoke tests |
+| `https://monitoring.googleapis.com/v3/projects/{project}/timeSeries` | GET | Quota metrics | GCP auth | Researched, not implemented |
 
-**Notes:**
-- The current adapter assumes `/v1/usage` works with the listed beta header, but real schemas may differ and should be validated with your key.
-- Anthropic admin usage/cost reporting references were researched as fallback guidance for future adapter updates.
-- Billing API is not used directly in this build; cost is inferred from public per-token pricing.
+### Mistral
 
----
-
-### Google Gemini
-
-**Data source:** Official (model list); Unavailable (usage/cost)
-
-| Endpoint | Method | Description | Auth |
-|---|---|---|---|
-| `https://generativelanguage.googleapis.com/v1beta/models` | GET | List available models | API key query param |
-
-**Parameters:**
-```
-?key=AIzaSy...
-```
-
-**Notes:**
-- Google AI Studio does not expose per-key usage metrics via REST API
-- Usage data is available via Google Cloud Console manually
-- To get quota metrics programmatically, set `ENABLE_EXPERIMENTAL=true` and `GOOGLE_CLOUD_PROJECT=<project-id>` — Cloud Monitoring API will be queried (not yet implemented in this version)
-
----
-
-### Mistral AI
-
-**Data source:** Best-effort official
-
-| Endpoint | Method | Description | Auth |
-|---|---|---|---|
-| `https://api.mistral.ai/v1/models` | GET | List available models | Bearer token |
-| `https://api.mistral.ai/v1/organization/billing/summary` | GET | Account balance | Bearer token |
-| `https://api.mistral.ai/v1/organization/usage` | GET | Token usage detail by model | Bearer token |
-
-**Required headers:**
-```
-Authorization: Bearer <mistral-key>
-```
-
-**Notes:**
-- `/v1/organization/usage` is implemented with `start_date` and `end_date` assumptions for monthly collection.
-- EUR-denominated balance and spend are stored separately from USD totals in the dashboard.
-- Balance (`credits_remaining`) is returned from the billing summary path when available.
-
----
+| Endpoint | Method | Purpose | Auth | Notes |
+|---|---|---|---|---|
+| `https://api.mistral.ai/v1/models` | GET | Model list | Bearer token | Used in smoke tests |
+| `https://api.mistral.ai/v1/organization/billing/summary` | GET | Balance and billing summary | Bearer token | Used by adapter |
+| `https://api.mistral.ai/v1/organization/usage` | GET | Usage by model/date | Bearer token | Best-effort official usage path |
 
 ### OpenRouter
 
-**Data source:** Official
+| Endpoint | Method | Purpose | Auth | Notes |
+|---|---|---|---|---|
+| `https://openrouter.ai/api/v1/models` | GET | Public model list | None | Public |
+| `https://openrouter.ai/api/v1/auth/key` | GET | Key info, credits, usage | Bearer token | Used in smoke tests and adapter |
+| `https://openrouter.ai/api/v1/generation` | GET | Recent generation details | Bearer token | Used for token breakdown assumptions |
 
-| Endpoint | Method | Description | Auth |
+## Hidden and experimental endpoints
+
+These are session-based and should be treated as experimental.
+
+### Claude Code
+
+| Endpoint | Method | Purpose | Auth |
 |---|---|---|---|
-| `https://openrouter.ai/api/v1/models` | GET | List all available models (public) | None required |
-| `https://openrouter.ai/api/v1/auth/key` | GET | Key info, credit balance, usage | Bearer token |
-| `https://openrouter.ai/api/v1/generation` | GET | Recent generation details (last N requests) | Bearer token |
+| `https://claude.ai/api/organizations` | GET | Discover organizations from web session | Claude session cookie |
+| `https://claude.ai/api/organizations/{org_id}/usage` | GET | Claude Code usage / utilization | Claude session cookie |
 
-**Required headers:**
-```
-Authorization: Bearer sk-or-...
-```
+Notes:
+- Requires `ENABLE_EXPERIMENTAL=true`
+- Requires `CLAUDE_CODE_SESSION`
+- May also use `CLAUDE_CODE_ORG_ID`
+- Community references indicate org discovery via web-session endpoints
 
-**Notes:**
-- `/api/v1/auth/key` returns key-level usage, limit, and remaining balance details used by the dashboard.
-- `/api/v1/generation` accepts `limit` query param; the current adapter assumes prompt/completion token fields in recent generation payloads.
-- No monthly reset window is assumed; usage is treated as cumulative unless a limit is present.
+Example shape observed from user-provided sample:
+- `five_hour.utilization`
+- `seven_day.utilization`
+- `extra_usage.monthly_limit`
+- `extra_usage.used_credits`
 
----
+### Mistral Vibe
 
-## Experimental / Community Endpoints
-
-> **Warning:** These endpoints are NOT officially documented. They may change, break, or disappear at any time. Gate them behind `ENABLE_EXPERIMENTAL=true`. Never rely on them for baseline functionality.
-
-### Claude Code — Analytics Endpoint
-
-| Endpoint | Method | Source | Status |
+| Endpoint | Method | Purpose | Auth |
 |---|---|---|---|
-| `https://api.claude.ai/api/organizations/usage` | GET | Community-discovered | Unverified |
+| `https://console.mistral.ai/api/billing/v2/vibe-usage` | GET | Vibe usage, quota, reset window | Mistral console session cookie |
 
-**Required:**
-- `ENABLE_EXPERIMENTAL=true`
-- `CLAUDE_CODE_SESSION=<session_cookie_value>`
+Notes:
+- Requires `ENABLE_EXPERIMENTAL=true`
+- Requires `MISTRAL_VIBE_SESSION`
+- Parses `usage_percentage`, `reset_at`, `start_date`, `end_date`, and per-model token groups
 
-**Notes:**
-- Requires an active Claude Code session cookie (not an API key)
-- Response structure is undocumented and may change
-- Only tested when both env vars are set
+### OpenAI legacy dashboard billing
 
-### OpenAI — Organization Completions Usage
-
-| Endpoint | Method | Source | Status |
+| Endpoint | Method | Purpose | Auth |
 |---|---|---|---|
-| `https://api.openai.com/v1/organization/usage/completions` | GET | Official (access-gated) | Limited availability |
+| `https://api.openai.com/dashboard/billing/usage` | GET | Legacy dashboard billing | Often browser-session dependent |
 
-**Required:**
-- `ENABLE_EXPERIMENTAL=true`
-- `OPENAI_ORG_ID=<org-id>`
-- Org-level API key
+Notes:
+- Community reports indicate this may require a browser session token instead of a standard API key
+- Treat as legacy and unreliable
 
-**Notes:**
-- This endpoint is documented but access is gated — not all API keys can query it
-- May return 403 if the organization hasn't been granted access
+## Current UX constraints
 
-### Gemini CLI — Cloud Monitoring Quotas
+- `/api/providers` and `/api/windows` hide providers without configured credentials.
+- `/api/tests/run` currently covers configured API providers and marks missing ones as `skipped`.
+- `/api/subscriptions` can still show config-driven subscription cards even when usage is unavailable.
+- `/api/timeseries` may still include placeholder tool points if refresh collected them; this is a remaining consistency gap.
 
-| Endpoint | Method | Source | Status |
-|---|---|---|---|
-| `https://monitoring.googleapis.com/v3/projects/{project}/timeSeries` | GET | Official (GCP) | Requires Cloud billing |
+## Research references
 
-**Required:**
-- `ENABLE_EXPERIMENTAL=true`
-- `GOOGLE_CLOUD_PROJECT=<project-id>`
-- Google Application Default Credentials or service account
-
-**Notes:**
-- Not yet implemented in this version
-- Would expose quota utilization for `generativelanguage.googleapis.com` metrics
-
----
-
-## Data Source Labels
-
-Every metric point in the dashboard is labeled with a data source:
-
-| Label | Meaning |
-|---|---|
-| **Official** | From a documented, public API endpoint |
-| **Inferred** | Estimated from token counts × public per-token pricing |
-| **Experimental** | From a community-discovered or access-gated endpoint |
-| **N/A** | No credential configured, or endpoint returned an error |
+- [Anthropic Usage & Cost Admin API](https://platform.claude.com/docs/en/build-with-claude/usage-cost-api)
+- [Anthropic Organizations API](https://platform.claude.com/docs/en/api/admin/organizations)
+- [OpenAI legacy billing endpoint discussion](https://community.openai.com/t/v1-dashboard-billing-usage-is-not-work/305887)
+- [OpenAI usage dashboard legacy walkthrough](https://community.appsmith.com/tutorial/tracking-your-openai-api-costs-hidden-endpoint-custom-app)
+- [Mistral Vibe product context](https://mistral.ai/news/mistral-vibe-2-0)
+- [Community Claude session/org reference](https://github.com/st1vms/unofficial-claude-api)

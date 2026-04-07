@@ -102,12 +102,13 @@ function providerColor(id) {
 // ── Navigation ────────────────────────────────────────────────────────────────
 
 const sectionTitles = {
-  overview:   'Overview',
-  providers:  'Providers',
-  models:     'Model Breakdown',
-  timeseries: 'Usage History',
-  windows:    'Usage Windows',
-  tests:      'Endpoint Tests',
+  overview:       'Overview',
+  providers:      'Providers',
+  models:         'Model Breakdown',
+  timeseries:     'Usage History',
+  subscriptions:  'Subscriptions',
+  windows:        'Usage Windows',
+  tests:          'Endpoint Tests',
 };
 
 function activateSection(name) {
@@ -154,7 +155,7 @@ async function post(path) {
 // ── Load & render ─────────────────────────────────────────────────────────────
 
 async function loadAll() {
-  const [overview, providers, models, windows, timeseries, tests, status] = await Promise.allSettled([
+  const [overview, providers, models, windows, timeseries, tests, status, subscriptions] = await Promise.allSettled([
     api('/api/overview'),
     api('/api/providers'),
     api('/api/models'),
@@ -162,6 +163,7 @@ async function loadAll() {
     api('/api/timeseries'),
     api('/api/tests'),
     api('/api/refresh/status'),
+    api('/api/subscriptions'),
   ]);
 
   if (overview.status === 'fulfilled') renderOverview(overview.value, providers.value);
@@ -171,6 +173,7 @@ async function loadAll() {
   if (windows.status === 'fulfilled') renderWindows(windows.value);
   if (tests.status === 'fulfilled') renderTests(tests.value);
   if (status.status === 'fulfilled') renderStatus(status.value);
+  if (subscriptions.status === 'fulfilled') renderSubscriptions(subscriptions.value);
 }
 
 // ── Overview ─────────────────────────────────────────────────────────────────
@@ -571,6 +574,134 @@ function renderWindows(windows) {
   });
 }
 
+// ── Subscriptions ─────────────────────────────────────────────────────────────
+
+function renderSubscriptions(data) {
+  // KPI row
+  const kpiRow = $('#sub-kpi-row');
+  kpiRow.innerHTML = '';
+
+  const kpis = [
+    {
+      label: 'Total Subscription Cost',
+      value: data.total_subscription_cost !== null ? fmtMoney(data.total_subscription_cost) : '—',
+      sub: 'Monthly combined',
+    },
+    {
+      label: 'API Equivalent Cost',
+      value: data.total_api_equivalent !== null ? fmtMoney(data.total_api_equivalent) : '—',
+      sub: 'If using direct API',
+    },
+    {
+      label: 'Estimated Savings',
+      value: data.total_estimated_savings !== null ? fmtMoney(data.total_estimated_savings) : '—',
+      sub: 'This billing period',
+    },
+  ];
+
+  kpis.forEach(k => {
+    const card = document.createElement('div');
+    card.className = 'kpi-card';
+    const isSavings = k.label === 'Estimated Savings';
+    const savingsClass = isSavings && data.total_estimated_savings > 0 ? ' style="color:var(--green)"' : '';
+    card.innerHTML = `
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value"${savingsClass}>${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    `;
+    kpiRow.appendChild(card);
+  });
+
+  // Tool cards
+  const grid = $('#sub-tools-grid');
+  grid.innerHTML = '';
+
+  if (!data.tools || data.tools.length === 0) {
+    grid.innerHTML = '<p class="provider-empty" style="grid-column:1/-1;padding:40px 0">No subscription tool data available.</p>';
+  } else {
+    data.tools.forEach(t => {
+      const pct = t.percent_used;
+      const barClass = pct !== null ? (pct >= 90 ? 'danger' : pct >= 70 ? 'warning' : '') : '';
+      const barWidth = pct !== null ? Math.min(pct, 100) : 0;
+
+      const card = document.createElement('div');
+      card.className = 'sub-tool-card';
+
+      // Header
+      let headerHtml = `<div class="sub-tool-header">
+        <span class="sub-tool-name">${t.display_name}</span>
+        ${t.plan_name ? `<span class="sub-tool-plan">${t.plan_name}</span>` : ''}
+      </div>`;
+
+      // Usage bar
+      let usageHtml = '';
+      if (t.used !== null) {
+        usageHtml = `
+          <div class="sub-tool-usage">
+            <div class="sub-usage-bar-wrap">
+              <div class="sub-usage-bar ${barClass}" style="width:${barWidth}%"></div>
+            </div>
+            <div class="sub-usage-label">
+              <span>${fmtMoney(t.used, t.unit)} used</span>
+              ${t.limit !== null ? `<span>${fmtMoney(t.limit, t.unit)} limit</span>` : '<span>No limit data</span>'}
+            </div>
+          </div>`;
+      } else {
+        usageHtml = '<p class="provider-empty">No usage data available</p>';
+      }
+
+      // Savings block
+      let savingsHtml = '<div class="sub-savings-block">';
+      if (t.subscription_price !== null) {
+        savingsHtml += `<div class="sub-savings-row">
+          <span>Subscription</span>
+          <span class="value">${fmtMoney(t.subscription_price)}/mo</span>
+        </div>`;
+      }
+      if (t.api_equivalent_cost !== null) {
+        savingsHtml += `<div class="sub-savings-row">
+          <span>API equivalent</span>
+          <span class="value">${fmtMoney(t.api_equivalent_cost)}</span>
+        </div>`;
+      }
+      if (t.estimated_savings !== null) {
+        const savingsPositive = t.estimated_savings > 0;
+        savingsHtml += `<div class="sub-savings-row ${savingsPositive ? 'positive' : ''}">
+          <span>Savings</span>
+          <span class="value">${savingsPositive ? '+' : ''}${fmtMoney(t.estimated_savings)}</span>
+        </div>`;
+      }
+      savingsHtml += '</div>';
+
+      // Notes
+      let notesHtml = t.notes
+        ? `<div class="sub-tool-notes">${t.notes}</div>`
+        : '';
+
+      // Meta row
+      let metaHtml = `<div class="sub-tool-meta">
+        <span>${t.window_label}</span>
+        ${sourceBadge(t.source)}
+      </div>`;
+
+      card.innerHTML = headerHtml + usageHtml + savingsHtml + notesHtml + metaHtml;
+      grid.appendChild(card);
+    });
+  }
+
+  // Caveats
+  const caveatsEl = $('#sub-caveats');
+  caveatsEl.innerHTML = '';
+  if (data.caveats && data.caveats.length > 0) {
+    data.caveats.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'sub-caveat-item';
+      item.textContent = c;
+      caveatsEl.appendChild(item);
+    });
+  }
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 function renderTests(tests) {
@@ -581,18 +712,31 @@ function renderTests(tests) {
     return;
   }
 
-  tbody.innerHTML = tests.map(t => `
+  tbody.innerHTML = tests.map(t => {
+    const ts = t.test_status || (t.ok ? 'pass' : 'fail');
+    let statusClass, statusLabel;
+    if (ts === 'skipped') {
+      statusClass = 'status-skip';
+      statusLabel = 'SKIP';
+    } else if (ts === 'pass') {
+      statusClass = 'status-ok';
+      statusLabel = 'PASS';
+    } else {
+      statusClass = 'status-err';
+      statusLabel = 'FAIL';
+    }
+    return `
     <tr>
       <td>${t.provider}</td>
       <td><code style="font-size:11px;font-family:var(--font-mono)">${t.endpoint}</code></td>
       <td><code style="font-size:10px;color:var(--text-dim)">${t.method}</code></td>
-      <td class="num ${t.ok ? 'status-ok' : 'status-err'}">${t.status_code || '—'}</td>
+      <td class="num ${statusClass}">${t.status_code || '—'} <small>${statusLabel}</small></td>
       <td class="num">${t.latency_ms !== null ? fmt(t.latency_ms, 'ms') : '—'}</td>
       <td style="max-width:220px;font-size:11px;color:var(--text-secondary)">${t.notes || '—'}</td>
       <td>${t.is_experimental ? '<span class="source-tag experimental">Experimental</span>' : '<span class="source-tag official">Official</span>'}</td>
       <td style="font-size:11px;color:var(--text-dim)">${relTime(t.tested_at)}</td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 // ── Refresh status ────────────────────────────────────────────────────────────
