@@ -1,0 +1,22 @@
+warning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+INFO:     Started server process [1491]
+INFO:     Waiting for application startup.
+2026-04-04 19:42:09,529 INFO app.main — Starting AI Usage Dashboard
+2026-04-04 19:42:09,532 INFO apscheduler.scheduler — Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-04-04 19:42:09,532 INFO apscheduler.scheduler — Added job "AI Usage Auto-Refresh" to job store "default"
+2026-04-04 19:42:09,532 INFO apscheduler.scheduler — Scheduler started
+2026-04-04 19:42:09,532 INFO app.scheduler — Scheduler started — refresh every 15 minutes
+2026-04-04 19:42:09,564 INFO app.main — Initial refresh complete
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:39222 - "GET /api/refresh/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37334 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37334 - "GET /static/css/dashboard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:37342 - "GET /static/js/dashboard.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37334 - "GET /api/providers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37352 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37342 - "GET /api/overview HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37362 - "GET /api/windows HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37378 - "GET /api/timeseries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37352 - "GET /api/tests HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37334 - "GET /api/refresh/status HTTP/1.1" 200 OK

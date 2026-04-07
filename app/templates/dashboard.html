@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Usage Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/dashboard.css" />
+</head>
+<body>
+
+<!-- ── Layout ─────────────────────────────────────────────────────────────── -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg aria-label="AI Usage Dashboard" viewBox="0 0 32 32" fill="none" width="28" height="28">
+        <rect x="2" y="2" width="12" height="12" rx="2" fill="currentColor" opacity="0.9"/>
+        <rect x="18" y="2" width="12" height="12" rx="2" fill="currentColor" opacity="0.5"/>
+        <rect x="2" y="18" width="12" height="12" rx="2" fill="currentColor" opacity="0.5"/>
+        <rect x="18" y="18" width="12" height="12" rx="2" fill="currentColor" opacity="0.2"/>
+      </svg>
+      <span class="logo-text">AI Usage</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#overview" class="nav-item active" data-section="overview">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+        Overview
+      </a>
+      <a href="#providers" class="nav-item" data-section="providers">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Providers
+      </a>
+      <a href="#models" class="nav-item" data-section="models">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 12L6 6l4 4 4-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Models
+      </a>
+      <a href="#timeseries" class="nav-item" data-section="timeseries">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="10" width="3" height="4" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="7" y="6" width="3" height="8" rx="0.5" fill="currentColor" opacity="0.8"/><rect x="12" y="2" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+        Usage History
+      </a>
+      <a href="#windows" class="nav-item" data-section="windows">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M1 7h14" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M11 1v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Windows
+      </a>
+      <a href="#tests" class="nav-item" data-section="tests">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10M3 5h10M3 11h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Endpoint Tests
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="refresh-info" id="refresh-info">
+        <div class="refresh-dot" id="refresh-dot"></div>
+        <span id="last-refresh-label">—</span>
+      </div>
+      <button class="btn-refresh" id="btn-refresh" title="Manual refresh">
+        <svg viewBox="0 0 16 16" fill="none" id="refresh-icon"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.6 0 3 .67 4 1.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 1v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Refresh
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content" id="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="page-title">Overview</h1>
+        <span class="page-subtitle" id="next-refresh-label"></span>
+      </div>
+      <div class="topbar-right">
+        <span class="data-badge" id="data-freshness">Loading…</span>
+      </div>
+    </header>
+
+    <!-- ── Overview Section ─────────────────────────────────────────────── -->
+    <section id="section-overview" class="section active">
+
+      <div class="kpi-grid" id="kpi-grid">
+        <!-- Populated by JS -->
+        <div class="kpi-card skeleton"></div>
+        <div class="kpi-card skeleton"></div>
+        <div class="kpi-card skeleton"></div>
+        <div class="kpi-card skeleton"></div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-card wide">
+          <div class="chart-header">
+            <span class="chart-title">Spend by Provider</span>
+            <span class="chart-badge official">Official</span>
+          </div>
+          <div class="chart-body" id="chart-spend-provider-body">
+            <canvas id="chart-spend-provider"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">Tokens by Provider</span>
+            <span class="chart-badge official">Official</span>
+          </div>
+          <div class="chart-body" id="chart-tokens-provider-body">
+            <canvas id="chart-tokens-provider"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── Providers Section ─────────────────────────────────────────────── -->
+    <section id="section-providers" class="section">
+      <div class="provider-grid" id="provider-grid">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- ── Models Section ────────────────────────────────────────────────── -->
+    <section id="section-models" class="section">
+      <div class="table-card">
+        <div class="table-header">
+          <span class="chart-title">Model Breakdown</span>
+          <span class="table-count" id="model-count">—</span>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table" id="models-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Provider</th>
+                <th class="num">Cost (USD)</th>
+                <th class="num">Input Tokens</th>
+                <th class="num">Output Tokens</th>
+                <th class="num">Requests</th>
+              </tr>
+            </thead>
+            <tbody id="models-tbody">
+              <tr><td colspan="6" class="empty-row">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Timeseries Section ─────────────────────────────────────────────── -->
+    <section id="section-timeseries" class="section">
+      <div class="chart-card full-width">
+        <div class="chart-header">
+          <span class="chart-title">Token Usage Over Time</span>
+          <div class="chart-controls">
+            <select id="ts-provider-filter" class="filter-select">
+              <option value="">All providers</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-body tall" id="chart-timeseries-body">
+          <canvas id="chart-timeseries"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Windows Section ───────────────────────────────────────────────── -->
+    <section id="section-windows" class="section">
+      <div class="windows-grid" id="windows-grid">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- ── Tests Section ─────────────────────────────────────────────────── -->
+    <section id="section-tests" class="section">
+      <div class="table-card">
+        <div class="table-header">
+          <span class="chart-title">Endpoint Smoke Tests</span>
+          <button class="btn-sm" id="btn-run-tests">Run Tests</button>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table" id="tests-table">
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Endpoint</th>
+                <th>Method</th>
+                <th class="num">Status</th>
+                <th class="num">Latency</th>
+                <th>Notes</th>
+                <th>Type</th>
+                <th>Tested At</th>
+              </tr>
+            </thead>
+            <tbody id="tests-tbody">
+              <tr><td colspan="8" class="empty-row">No test results yet. Click "Run Tests" to test endpoints.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>
